@@ -1,4 +1,5 @@
 use crate::api::types::{MusicTasteOverview, Song};
+use rocket::serde::Serialize;
 use sqlx::{FromRow, Transaction};
 use sqlx_postgres::{PgPool, Postgres};
 use std::option::Option;
@@ -9,7 +10,7 @@ pub struct User {
     pub name: String,
 }
 
-#[derive(FromRow)]
+#[derive(FromRow, Serialize)]
 pub struct MusicTasteIndividual {
     pub other_user_name: String,
     pub overlapping_songs: Option<i64>,
@@ -464,8 +465,8 @@ combined_metrics AS (
     WHERE COALESCE(so.overlapping_songs, 0) > 0 
        OR COALESCE(ao.shared_artists, 0) > 0
 )
-SELECT 
-    u.name AS other_user_name,
+SELECT
+    COALESCE(u.display_name, u.name) AS "other_user_name!",
     cm.overlapping_songs,
     CAST(ROUND(cm.avg_song_rank_diff, 2) AS DOUBLE PRECISION) AS song_rank_diff,
     CAST(ROUND(cm.song_strength, 2) AS DOUBLE PRECISION) AS song_relationship_strength,
@@ -479,10 +480,9 @@ FROM combined_metrics cm
 JOIN users u ON cm.other_user_id = u.id
 LEFT JOIN overlapping_song_details osd ON cm.other_user_id = osd.other_user_id
 LEFT JOIN artist_overlap_details aod ON cm.other_user_id = aod.other_user_id
-ORDER BY 
-    cm.combined_compatibility_score DESC,
-    cm.overlapping_songs DESC,
-    cm.shared_artists DESC
+ORDER BY
+    cm.combined_compatibility_score DESC
+LIMIT 10
         "#,
 active_user_id
     ).fetch_all(pool).await?;

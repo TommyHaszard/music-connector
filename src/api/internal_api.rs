@@ -35,12 +35,22 @@ pub async fn signup_page() -> Option<NamedFile> {
 #[get("/main")]
 pub async fn main_page(cookies: &CookieJar<'_>) -> Result<NamedFile, Redirect> {
     authenticate(cookies).await;
-    
+
     let mut file_path = PathBuf::from("static");
     file_path.push("index.html");
     NamedFile::open(file_path)
         .await
         .map_err(|_| Redirect::to("/fail"))
+}
+
+#[get("/connections")]
+pub async fn connections_page(cookies: &CookieJar<'_>) -> Result<NamedFile, Redirect> {
+    if cookies.get_private("user").is_none() {
+        return Err(Redirect::to("/login"));
+    }
+    NamedFile::open(Path::new("static").join("connector.html"))
+        .await
+        .map_err(|_| Redirect::to("/login"))
 }
 
 #[get("/<file..>")]
@@ -188,4 +198,58 @@ pub async fn get_music_taste() -> Result<Json<Vec<MusicTasteOverview>>, (Status,
         })?;
 
     Ok(Json(overview))
+}
+
+#[get("/music-taste-user")]
+pub async fn get_music_taste_user(
+    cookies: &CookieJar<'_>,
+) -> Result<Json<Vec<db::MusicTasteIndividual>>, (Status, Json<ErrorResponse>)> {
+    let db_pool = DB_POOL.get().unwrap();
+
+    let user_name_opt = cookies
+        .get_private("user")
+        .map(|cookie| cookie.value().to_string());
+
+    if user_name_opt.is_none() {
+        return Err((
+            Status::Unauthorized,
+            Json(ErrorResponse {
+                error: "Not logged in".to_string(),
+            }),
+        ));
+    }
+
+    let user_name = user_name_opt.unwrap();
+    let user = db::get_user(&db_pool, &user_name)
+        .await
+        .map_err(|err| {
+            (
+                Status::InternalServerError,
+                Json(ErrorResponse {
+                    error: format!("Database error: {}", err),
+                }),
+            )
+        })?;
+
+    if user.is_none() {
+        return Err((
+            Status::NotFound,
+            Json(ErrorResponse {
+                error: "User not found".to_string(),
+            }),
+        ));
+    }
+
+    let connections = db::get_music_taste_user(&db_pool, &user.unwrap().id)
+        .await
+        .map_err(|err| {
+            (
+                Status::InternalServerError,
+                Json(ErrorResponse {
+                    error: format!("Failed to get connections: {}", err),
+                }),
+            )
+        })?;
+
+    Ok(Json(connections))
 }

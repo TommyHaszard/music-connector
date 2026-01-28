@@ -48,6 +48,8 @@ fn rocket() -> _ {
             internal_api::get_songs,
             internal_api::generate_playlist,
             internal_api::get_music_taste,
+            internal_api::get_music_taste_user,
+            internal_api::connections_page,
             auth_api::login,
             auth_api::signup,
             auth_api::logout

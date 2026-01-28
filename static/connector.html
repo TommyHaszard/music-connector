@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connections - We are all inside the (Music) Circle</title>
+  <link rel="stylesheet" href="design-system.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* Graph Container */
+    .graph-container {
+      position: relative;
+      width: 100%;
+      height: calc(100vh - var(--header-height) - var(--space-6) * 2);
+      min-height: 500px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .graph-area {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* SVG Layer for Lines */
+    .graph-svg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .connection-line {
+      stroke-width: 2;
+      fill: none;
+      opacity: 0.7;
+      transition: opacity var(--transition-fast);
+    }
+
+    /* Nodes */
+    .node {
+      position: absolute;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-full);
+      background-color: var(--color-bg-elevated);
+      border: 2px solid var(--color-border);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      transform: translate(-50%, -50%);
+    }
+
+    .node:hover {
+      border-color: var(--color-accent);
+      transform: translate(-50%, -50%) scale(1.1);
+      z-index: 10;
+    }
+
+    .node-center {
+      width: 80px;
+      height: 80px;
+      border: 3px solid var(--color-accent);
+      background: linear-gradient(135deg, var(--color-bg-elevated), var(--color-bg-hover));
+      cursor: default;
+      z-index: 5;
+      font-size: var(--font-size-sm);
+      font-weight: 700;
+      color: var(--color-accent);
+    }
+
+    .node-center:hover {
+      transform: translate(-50%, -50%);
+    }
+
+    .orbit-circle {
+      fill: none;
+      stroke: var(--color-accent);
+      stroke-width: 2;
+      opacity: 1;
+    }
+
+    .node-connection {
+      width: 60px;
+      height: 60px;
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+      color: var(--color-text-primary);
+      text-align: center;
+      overflow: hidden;
+      padding: var(--space-1);
+    }
+
+    .node-connection span {
+      display: block;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+    }
+
+    /* Node score colors */
+    .node-strong {
+      border-color: #7db88a;
+    }
+
+    .node-medium {
+      border-color: #F59E0B;
+    }
+
+    .node-weak {
+      border-color: #d4837a;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: all var(--transition-normal);
+    }
+
+    .modal-overlay.visible {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal {
+      background-color: var(--color-bg-elevated);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-4);
+      max-width: 400px;
+      width: 90%;
+      transform: scale(0.9);
+      transition: transform var(--transition-normal);
+    }
+
+    .modal-overlay.visible .modal {
+      transform: scale(1);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--space-3);
+      padding-bottom: var(--space-2);
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .modal-title {
+      font-size: var(--font-size-lg);
+      font-weight: 700;
+      color: var(--color-text-primary);
+    }
+
+    .modal-close {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: none;
+      border: none;
+      color: var(--color-text-muted);
+      cursor: pointer;
+      border-radius: var(--radius-sm);
+      font-size: var(--font-size-lg);
+      transition: all var(--transition-fast);
+    }
+
+    .modal-close:hover {
+      background-color: var(--color-bg-hover);
+      color: var(--color-text-primary);
+    }
+
+    .modal-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-2);
+    }
+
+    .modal-stat {
+      background-color: var(--color-bg-primary);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: var(--space-2);
+      text-align: center;
+    }
+
+    .modal-stat-value {
+      font-size: var(--font-size-xl);
+      font-weight: 700;
+      color: var(--color-accent);
+    }
+
+    .modal-stat-label {
+      font-size: var(--font-size-xs);
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Modal Details Sections */
+    .modal-section {
+      margin-top: var(--space-3);
+      padding-top: var(--space-3);
+      border-top: 1px solid var(--color-border);
+    }
+
+    .modal-section-title {
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+      color: var(--color-text-secondary);
+      margin-bottom: var(--space-2);
+    }
+
+    .modal-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+      max-height: 150px;
+      overflow-y: auto;
+    }
+
+    .modal-list-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: var(--space-1) var(--space-2);
+      background-color: var(--color-bg-primary);
+      border-radius: var(--radius-sm);
+      font-size: var(--font-size-sm);
+    }
+
+    .modal-list-item-name {
+      color: var(--color-text-primary);
+      font-weight: 500;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      margin-right: var(--space-2);
+    }
+
+    .modal-list-item-artist {
+      color: var(--color-text-muted);
+      font-size: var(--font-size-xs);
+    }
+
+    .modal-list-item-ranks {
+      font-size: var(--font-size-xs);
+      color: var(--color-text-muted);
+      white-space: nowrap;
+    }
+
+    .modal-empty {
+      color: var(--color-text-muted);
+      font-size: var(--font-size-sm);
+      font-style: italic;
+    }
+
+    /* Empty State */
+    .empty-state-container {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: calc(100vh - var(--header-height) - var(--space-6) * 2);
+      min-height: 400px;
+    }
+
+    .empty-state-container.visible {
+      display: flex;
+    }
+
+    .empty-state-title {
+      font-size: var(--font-size-lg);
+      font-weight: 600;
+      color: var(--color-text-primary);
+      margin-top: var(--space-3);
+    }
+
+    .empty-state-description {
+      font-size: var(--font-size-base);
+      color: var(--color-text-secondary);
+      margin-top: var(--space-1);
+      text-align: center;
+      max-width: 400px;
+    }
+
+    /* Loading State */
+    .loading-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: calc(100vh - var(--header-height) - var(--space-6) * 2);
+      min-height: 400px;
+    }
+
+    .loading-text {
+      margin-top: var(--space-2);
+      color: var(--color-text-secondary);
+    }
+
+    /* Hide graph when empty or loading */
+    .graph-container.hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <a href="/" class="header-logo">We are all inside the (Music) Circle</a>
+    <div style="display: flex; gap: var(--space-2);">
+      <a href="/main" class="btn btn-secondary">My Songs</a>
+      <button id="logout-btn" class="btn btn-secondary">Logout</button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main">
+    <!-- Loading State -->
+    <div id="loading-container" class="loading-container">
+      <div class="spinner"></div>
+      <p class="loading-text">Loading connections...</p>
+    </div>
+
+    <!-- Empty State -->
+    <div id="empty-state" class="empty-state-container">
+      <div class="empty-state-icon">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="12" cy="12" r="3"/>
+          <circle cx="4" cy="6" r="2"/>
+          <circle cx="20" cy="6" r="2"/>
+          <circle cx="4" cy="18" r="2"/>
+          <circle cx="20" cy="18" r="2"/>
+          <line x1="9.5" y1="10" x2="5.5" y2="7.5"/>
+          <line x1="14.5" y1="10" x2="18.5" y2="7.5"/>
+          <line x1="9.5" y1="14" x2="5.5" y2="16.5"/>
+          <line x1="14.5" y1="14" x2="18.5" y2="16.5"/>
+        </svg>
+      </div>
+      <h2 class="empty-state-title">No Connections Yet</h2>
+      <p class="empty-state-description">
+        Other users need to add their songs to see your musical connections.
+        Check back later or invite friends to join!
+      </p>
+      <a href="/main" class="btn btn-primary" style="margin-top: var(--space-3);">Add Your Songs</a>
+    </div>
+
+    <!-- Graph Container -->
+    <div id="graph-container" class="graph-container hidden">
+      <div id="graph-area" class="graph-area">
+        <svg id="graph-svg" class="graph-svg"></svg>
+        <!-- Nodes will be added here dynamically -->
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal -->
+  <div id="modal-overlay" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-title" class="modal-title">User Name</h3>
+        <button id="modal-close" class="modal-close">&times;</button>
+      </div>
+      <div class="modal-stats">
+        <div class="modal-stat">
+          <div id="modal-score" class="modal-stat-value">0</div>
+          <div class="modal-stat-label">Match Score</div>
+        </div>
+        <div class="modal-stat">
+          <div id="modal-songs" class="modal-stat-value">0</div>
+          <div class="modal-stat-label">Shared Songs</div>
+        </div>
+        <div class="modal-stat">
+          <div id="modal-artists" class="modal-stat-value">0</div>
+          <div class="modal-stat-label">Shared Artists</div>
+        </div>
+      </div>
+
+      <!-- Shared Songs Section -->
+      <div id="modal-songs-section" class="modal-section">
+        <h4 class="modal-section-title">Shared Songs</h4>
+        <div id="modal-songs-list" class="modal-list"></div>
+      </div>
+
+      <!-- Shared Artists Section -->
+      <div id="modal-artists-section" class="modal-section">
+        <h4 class="modal-section-title">Shared Artists</h4>
+        <div id="modal-artists-list" class="modal-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // DOM Elements
+    const loadingContainer = document.getElementById('loading-container');
+    const emptyState = document.getElementById('empty-state');
+    const graphContainer = document.getElementById('graph-container');
+    const graphArea = document.getElementById('graph-area');
+    const graphSvg = document.getElementById('graph-svg');
+    const modalOverlay = document.getElementById('modal-overlay');
+    const modalTitle = document.getElementById('modal-title');
+    const modalScore = document.getElementById('modal-score');
+    const modalSongs = document.getElementById('modal-songs');
+    const modalArtists = document.getElementById('modal-artists');
+    const modalSongsList = document.getElementById('modal-songs-list');
+    const modalArtistsList = document.getElementById('modal-artists-list');
+    const modalSongsSection = document.getElementById('modal-songs-section');
+    const modalArtistsSection = document.getElementById('modal-artists-section');
+    const modalClose = document.getElementById('modal-close');
+    const logoutBtn = document.getElementById('logout-btn');
+
+    // State
+    let connections = [];
+
+    // Color thresholds for connection lines
+    const LINE_COLORS = {
+      strong: '#7db88a',  // Green: score >= 20
+      medium: '#F59E0B',  // Yellow: score 10-19
+      weak: '#d4837a'     // Red: score < 10
+    };
+
+    // Get line color based on combined score
+    function getLineColor(score) {
+      if (score >= 20) return LINE_COLORS.strong;
+      if (score >= 10) return LINE_COLORS.medium;
+      return LINE_COLORS.weak;
+    }
+
+    // Get node class based on combined score
+    function getNodeClass(score) {
+      if (score >= 20) return 'node-strong';
+      if (score >= 10) return 'node-medium';
+      return 'node-weak';
+    }
+
+    // Calculate positions for nodes in a circle
+    function calculateNodePositions(count, centerX, centerY, radius) {
+      const positions = [];
+      for (let i = 0; i < count; i++) {
+        // Start from top (-90 degrees) and go clockwise
+        const angle = (i / count) * 2 * Math.PI - Math.PI / 2;
+        positions.push({
+          x: centerX + radius * Math.cos(angle),
+          y: centerY + radius * Math.sin(angle)
+        });
+      }
+      return positions;
+    }
+
+    // Create a connection node element
+    function createConnectionNode(connection, position, index) {
+      const node = document.createElement('div');
+      node.className = `node node-connection ${getNodeClass(connection.combined_score || 0)}`;
+      node.style.left = `${position.x}px`;
+      node.style.top = `${position.y}px`;
+      node.dataset.index = index;
+
+      const span = document.createElement('span');
+      span.textContent = connection.other_user_name;
+      node.appendChild(span);
+
+      node.addEventListener('click', () => openModal(connection));
+
+      return node;
+    }
+
+    // Create the center node
+    function createCenterNode(centerX, centerY) {
+      const node = document.createElement('div');
+      node.className = 'node node-center';
+      node.style.left = `${centerX}px`;
+      node.style.top = `${centerY}px`;
+      node.textContent = 'You';
+      return node;
+    }
+
+    // Create the orbit circle
+    function createOrbitCircle(centerX, centerY, radius) {
+      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      circle.setAttribute('cx', centerX);
+      circle.setAttribute('cy', centerY);
+      circle.setAttribute('r', radius);
+      circle.classList.add('orbit-circle');
+      return circle;
+    }
+
+    // Create an SVG line element
+    function createLine(x1, y1, x2, y2, color) {
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', x1);
+      line.setAttribute('y1', y1);
+      line.setAttribute('x2', x2);
+      line.setAttribute('y2', y2);
+      line.setAttribute('stroke', color);
+      line.classList.add('connection-line');
+      return line;
+    }
+
+    // Render the graph
+    function renderGraph() {
+      // Clear existing nodes and lines
+      graphArea.querySelectorAll('.node').forEach(node => node.remove());
+      graphSvg.innerHTML = '';
+
+      if (connections.length === 0) {
+        return;
+      }
+
+      const rect = graphArea.getBoundingClientRect();
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+
+      // Calculate radius based on container size
+      const maxRadius = Math.min(rect.width, rect.height) / 2;
+      const radiusNodes = Math.min(maxRadius - 50, 200 + connections.length * 10);
+      const radiusOrbit = Math.min(maxRadius, radiusNodes + 50);
+
+      // Calculate positions for connection nodes
+      const positions = calculateNodePositions(connections.length, centerX, centerY, radiusNodes);
+
+      // Draw orbit circle
+      const orbitCircle = createOrbitCircle(centerX, centerY, radiusOrbit);
+      graphSvg.appendChild(orbitCircle);
+
+      // Create center node
+      const centerNode = createCenterNode(centerX, centerY);
+      graphArea.appendChild(centerNode);
+
+			const rearrangedConnections = connections.sort(() => Math.random() - 0.5);
+
+      // Create connection nodes and lines
+      rearrangedConnections.forEach((connection, index) => {
+        const position = positions[index];
+
+        // Create line from center to connection
+        const line = createLine(
+          centerX,
+          centerY,
+          position.x,
+          position.y,
+          getLineColor(connection.combined_score || 0)
+        );
+        graphSvg.appendChild(line);
+
+        // Create connection node
+        const node = createConnectionNode(connection, position, index);
+        graphArea.appendChild(node);
+      });
+    }
+
+    // Open modal with connection details
+    function openModal(connection) {
+      modalTitle.textContent = connection.other_user_name;
+      modalScore.textContent = Math.round(connection.combined_score || 0);
+      modalSongs.textContent = connection.overlapping_songs || 0;
+      modalArtists.textContent = connection.overlapping_artists || 0;
+
+      // Populate shared songs list
+      modalSongsList.innerHTML = '';
+      const songs = connection.overlapping_song_details || [];
+      if (songs.length > 0) {
+        modalSongsSection.style.display = 'block';
+        songs.forEach(song => {
+          const item = document.createElement('div');
+          item.className = 'modal-list-item';
+          item.innerHTML = `
+            <div>
+              <div class="modal-list-item-name">${song.song_name}</div>
+              <div class="modal-list-item-artist">${song.artist}</div>
+            </div>
+            <div class="modal-list-item-ranks">You: #${song.active_user_rank} · Them: #${song.other_user_rank}</div>
+          `;
+          modalSongsList.appendChild(item);
+        });
+      } else {
+        modalSongsSection.style.display = 'none';
+      }
+
+      // Populate shared artists list
+      modalArtistsList.innerHTML = '';
+      const artists = connection.overlapping_artist_details || [];
+      if (artists.length > 0) {
+        modalArtistsSection.style.display = 'block';
+        // Group by artist to avoid duplicates
+        const uniqueArtists = [...new Map(artists.map(a => [a.artist, a])).values()];
+        uniqueArtists.forEach(artist => {
+          const item = document.createElement('div');
+          item.className = 'modal-list-item';
+          item.innerHTML = `
+            <div class="modal-list-item-name">${artist.artist}</div>
+            <div class="modal-list-item-ranks">You: "${artist.active_user_song}" · Them: "${artist.other_user_song}"</div>
+          `;
+          modalArtistsList.appendChild(item);
+        });
+      } else {
+        modalArtistsSection.style.display = 'none';
+      }
+
+      modalOverlay.classList.add('visible');
+    }
+
+    // Close modal
+    function closeModal() {
+      modalOverlay.classList.remove('visible');
+    }
+
+    // Fetch connections from API
+    async function fetchConnections() {
+      try {
+        const response = await fetch('/music-taste-user');
+
+        if (response.status === 401) {
+          window.location.href = '/login';
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch connections');
+        }
+
+        connections = await response.json();
+
+        // Hide loading, show appropriate view
+        loadingContainer.style.display = 'none';
+
+        if (connections.length === 0) {
+          emptyState.classList.add('visible');
+          graphContainer.classList.add('hidden');
+        } else {
+          emptyState.classList.remove('visible');
+          graphContainer.classList.remove('hidden');
+          renderGraph();
+        }
+      } catch (error) {
+        console.error('Error fetching connections:', error);
+        loadingContainer.style.display = 'none';
+        emptyState.classList.add('visible');
+      }
+    }
+
+    // Handle logout
+    async function handleLogout() {
+      try {
+        await fetch('/api/logout', { method: 'POST' });
+        window.location.href = '/login';
+      } catch (error) {
+        console.error('Logout error:', error);
+        window.location.href = '/login';
+      }
+    }
+
+    // Event Listeners
+    modalClose.addEventListener('click', closeModal);
+    modalOverlay.addEventListener('click', (e) => {
+      if (e.target === modalOverlay) {
+        closeModal();
+      }
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeModal();
+      }
+    });
+    logoutBtn.addEventListener('click', handleLogout);
+
+    // Handle window resize
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        if (connections.length > 0) {
+          renderGraph();
+        }
+      }, 150);
+    });
+
+    // Initialize
+    fetchConnections();
+  </script>
+</body>
+</html>
