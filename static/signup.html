@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign Up - Music Connector</title>
+  <link rel="stylesheet" href="design-system.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    .auth-container {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-3);
+    }
+
+    .auth-card {
+      width: 100%;
+      max-width: 400px;
+      background-color: var(--color-bg-elevated);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-5);
+    }
+
+    .auth-header {
+      text-align: center;
+      margin-bottom: var(--space-4);
+    }
+
+    .auth-title {
+      font-size: var(--font-size-xl);
+      font-weight: 700;
+      color: var(--color-text-primary);
+      margin-bottom: var(--space-1);
+    }
+
+    .auth-subtitle {
+      font-size: var(--font-size-base);
+      color: var(--color-text-secondary);
+    }
+
+    .auth-form {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+    }
+
+    .form-label {
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+      color: var(--color-text-secondary);
+    }
+
+    .form-hint {
+      font-size: var(--font-size-xs);
+      color: var(--color-text-muted);
+    }
+
+    .form-row {
+      display: flex;
+      gap: var(--space-2);
+    }
+
+    .form-row .form-group {
+      flex: 1;
+    }
+
+    .error-message {
+      display: none;
+      padding: var(--space-2);
+      background-color: rgba(212, 131, 122, 0.1);
+      border: 1px solid var(--color-red);
+      border-radius: var(--radius-sm);
+      color: var(--color-red);
+      font-size: var(--font-size-sm);
+      text-align: center;
+    }
+
+    .error-message.visible {
+      display: block;
+    }
+
+    .auth-footer {
+      text-align: center;
+      margin-top: var(--space-3);
+      padding-top: var(--space-3);
+      border-top: 1px solid var(--color-border);
+    }
+
+    .auth-footer-text {
+      font-size: var(--font-size-sm);
+      color: var(--color-text-secondary);
+    }
+
+    .auth-footer-link {
+      color: var(--color-accent);
+      font-weight: 600;
+      transition: color var(--transition-fast);
+    }
+
+    .auth-footer-link:hover {
+      color: var(--color-accent-hover);
+    }
+
+    .btn-full {
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div class="auth-container">
+    <div class="auth-card">
+      <div class="auth-header">
+        <h1 class="auth-title">Create Account</h1>
+        <p class="auth-subtitle">Join Music Connector</p>
+      </div>
+
+      <form id="signup-form" class="auth-form">
+        <div class="form-group">
+          <label for="username" class="form-label">Username</label>
+          <input
+            type="text"
+            id="username"
+            name="username"
+            class="input"
+            placeholder="Choose a username"
+            pattern="[a-zA-Z0-9_]+"
+            title="Username can only contain letters, numbers, and underscores"
+            required
+          >
+          <span class="form-hint">Letters, numbers, and underscores only</span>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="first_name" class="form-label">First Name</label>
+            <input
+              type="text"
+              id="first_name"
+              name="first_name"
+              class="input"
+              placeholder="First name"
+              required
+            >
+          </div>
+          <div class="form-group">
+            <label for="last_name" class="form-label">Last Name</label>
+            <input
+              type="text"
+              id="last_name"
+              name="last_name"
+              class="input"
+              placeholder="Last name"
+              required
+            >
+          </div>
+        </div>
+
+        <div id="error-message" class="error-message"></div>
+
+        <button type="submit" class="btn btn-primary btn-full">Create Account</button>
+      </form>
+
+      <div class="auth-footer">
+        <p class="auth-footer-text">
+          Already have an account? <a href="/login" class="auth-footer-link">Login</a>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('signup-form');
+    const errorMessage = document.getElementById('error-message');
+    const usernameInput = document.getElementById('username');
+    const firstNameInput = document.getElementById('first_name');
+    const lastNameInput = document.getElementById('last_name');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      // Hide any previous error
+      errorMessage.classList.remove('visible');
+      errorMessage.textContent = '';
+
+      const username = usernameInput.value.trim();
+      const firstName = firstNameInput.value.trim();
+      const lastName = lastNameInput.value.trim();
+
+      // Validate username
+      if (!username) {
+        showError('Please enter a username');
+        return;
+      }
+
+      if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+        showError('Username can only contain letters, numbers, and underscores');
+        return;
+      }
+
+      // Validate first name
+      if (!firstName) {
+        showError('Please enter your first name');
+        return;
+      }
+
+      // Validate last name
+      if (!lastName) {
+        showError('Please enter your last name');
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/signup', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            username,
+            first_name: firstName,
+            last_name: lastName
+          }),
+        });
+
+        if (response.ok) {
+          // Redirect to main page on success
+          window.location.href = '/main';
+        } else {
+          const data = await response.json();
+          showError(data.error || 'Signup failed. Please try again.');
+        }
+      } catch (error) {
+        showError('An error occurred. Please try again.');
+      }
+    });
+
+    function showError(message) {
+      errorMessage.textContent = message;
+      errorMessage.classList.add('visible');
+    }
+  </script>
+</body>
+</html>

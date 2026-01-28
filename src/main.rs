@@ -9,7 +9,7 @@ use rocket::fs::FileServer;
 use rocket::tokio::sync::OnceCell;
 use sqlx::{ConnectOptions, Connection};
 use sqlx_postgres::{PgPool, PgPoolOptions};
-use crate::api::{external_api, internal_api};
+use crate::api::{auth_api, internal_api};
 
 static DB_POOL: OnceCell<PgPool> = OnceCell::const_new();
 
@@ -37,7 +37,21 @@ fn rocket() -> _ {
             DB_POOL.set(pool).unwrap();
             rocket }))
         .manage(Client::new())
-        .mount("/", routes![internal_api::index, internal_api::login_page, external_api::callback, internal_api::main_page, internal_api::files, internal_api::search_songs, internal_api::save_songs, internal_api::get_songs, internal_api::generate_playlist, internal_api::get_music_taste])
+        .mount("/", routes![
+            internal_api::index,
+            internal_api::login_page_static,
+            internal_api::signup_page,
+            internal_api::main_page,
+            internal_api::files,
+            internal_api::search_songs,
+            internal_api::save_songs,
+            internal_api::get_songs,
+            internal_api::generate_playlist,
+            internal_api::get_music_taste,
+            auth_api::login,
+            auth_api::signup,
+            auth_api::logout
+        ])
         .mount("/main", FileServer::from(static_dir))
 
 }

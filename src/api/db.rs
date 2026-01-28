@@ -53,6 +53,40 @@ pub async fn get_user(pool: &PgPool, name: &str) -> Result<Option<User>, sqlx::E
     Ok(row) // Return Option<User>: Some(user) if found, None if not
 }
 
+pub async fn get_user_by_username(pool: &PgPool, username: &str) -> Result<Option<User>, sqlx::Error> {
+    let normalized = username.to_lowercase();
+    sqlx::query_as!(
+        User,
+        "SELECT id, name FROM users WHERE LOWER(name) = $1",
+        normalized
+    )
+    .fetch_optional(pool)
+    .await
+}
+
+pub async fn create_user(
+    pool: &PgPool,
+    username: &str,
+    first_name: &str,
+    last_name: &str,
+) -> Result<User, sqlx::Error> {
+    let normalized_username = username.to_lowercase();
+    let display_name = format!("{} {}", first_name.trim(), last_name.trim());
+
+    let row = sqlx::query!(
+        "INSERT INTO users (name, display_name) VALUES ($1, $2) RETURNING id, name",
+        normalized_username,
+        display_name
+    )
+    .fetch_one(pool)
+    .await?;
+
+    Ok(User {
+        id: row.id,
+        name: row.name,
+    })
+}
+
 pub async fn insert_or_update_songs(
     pool: &PgPool,
     user_id: &i32,

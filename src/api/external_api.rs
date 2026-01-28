@@ -1,4 +1,3 @@
-use crate::api::internal_api::{login_page, main_page};
 use crate::api::types::{
     AccessTokenResponse, AddSongsToPlaylistBody, CreatePlaylistBody, ErrorResponse,
     SearchSongsQuery, Song,
@@ -16,10 +15,9 @@ use std::collections::HashSet;
 use std::env;
 use std::time::Duration as StdDuration;
 
-static SPOTIFY_AUTH_URL: &str = "https://accounts.spotify.com/authorize";
 static SPOTIFY_TOKEN_URL: &str = "https://accounts.spotify.com/api/token";
 
-pub async fn authenticate(cookies: &CookieJar<'_>) -> Redirect {
+pub async fn authenticate(cookies: &CookieJar<'_>) {
     let client_id = env::var("SPOTIFY_CLIENT");
     if client_id.is_err() {
         Redirect::to("/fail");
@@ -34,7 +32,7 @@ pub async fn authenticate(cookies: &CookieJar<'_>) -> Redirect {
 
     let basic_appended = format!("Basic {}", encoded);
 
-    rocket::info!("JSON: {:?}", encoded);
+    //rocket::info!("JSON: {:?}", encoded);
 
     let client = Client::new();
     let response = client
@@ -56,90 +54,10 @@ pub async fn authenticate(cookies: &CookieJar<'_>) -> Redirect {
     cookies.add_private(
         Cookie::build(("api_token", data.access_token))
             .http_only(true)
-            .secure(true)
             .max_age(Duration::minutes(60)),
     );
 
     sleep(StdDuration::from_secs(3)).await;
-    Redirect::to("/main")
-}
-
-#[get("/callback?<code>")]
-pub async fn callback(cookies: &CookieJar<'_>, code: String) -> Redirect {
-    let client_id = env::var("SPOTIFY_CLIENT");
-    if client_id.is_err() {
-        Redirect::to("/fail");
-    }
-
-    let client_secret = env::var("SPOTIFY_SECRET");
-    if client_secret.is_err() {
-        Redirect::to("/fail");
-    }
-
-    let redirect_uri = env::var("SPOTIFY_REDIRECT_URI").expect("SPOTIFY_REDIRECT_URI must be set");
-
-    let client = Client::new();
-    let response = client
-        .post(SPOTIFY_TOKEN_URL)
-        .header("Content-Type", "application/x-www-form-urlencoded")
-        .form(&[
-            ("grant_type", "authorization_code"),
-            ("code", &code),
-            ("redirect_uri", &redirect_uri),
-            ("client_id", &client_id.unwrap()),
-            ("client_secret", &client_secret.unwrap()),
-        ])
-        .send()
-        .await
-        .expect("Failed to get access token");
-
-    let data: AccessTokenResponse = response
-        .json()
-        .await
-        .expect("Failed to parse token response");
-
-    let profile_url = "https://api.spotify.com/v1/me";
-
-    let response = client
-        .get(profile_url)
-        .header(
-            "Authorization",
-            format!("Bearer {}", data.access_token.clone()),
-        )
-        .send()
-        .await
-        .expect("Failed to parse token response");
-
-    match response {
-        res if res.status().is_success() => {
-            let data = &res
-                .json::<serde_json::Value>()
-                .await
-                .expect("Failed to get access token");
-            rocket::info!("Data {:#?}", data);
-            cookies.add_private(
-                Cookie::build(("user", data["uri"].to_string()))
-                    .http_only(true)
-                    .secure(true)
-                    .max_age(Duration::minutes(60)),
-            )
-        }
-        res => {
-            // Handle other HTTP statuses
-            rocket::error!("Response was not successful: {:?}", res.status());
-            return Redirect::to("/fail");
-        }
-    }
-
-    cookies.add_private(
-        Cookie::build(("api_token", data.access_token))
-            .http_only(true)
-            .secure(true)
-            .max_age(Duration::minutes(60)),
-    );
-
-    sleep(StdDuration::from_secs(3)).await;
-    Redirect::to("/main")
 }
 
 pub async fn create_playlist(
@@ -351,7 +269,7 @@ pub async fn search_spotify_songs(
         .map(|cookie| cookie.value().to_string());
 
     if token.is_none() {
-        login_page(cookies).await;
+        authenticate(cookies).await;
         let token2 = cookies
             .get_private("api_token")
             .map(|cookie| cookie.value().to_string());

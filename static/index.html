@@ -11,7 +11,10 @@
   <!-- Header -->
   <header class="header">
     <a href="/" class="header-logo">Music Connector</a>
-    <a href="connector.html" class="btn btn-secondary">View Connections →</a>
+    <div style="display: flex; gap: var(--space-2);">
+      <a href="connector.html" class="btn btn-secondary">View Connections →</a>
+      <button id="logout-btn" class="btn btn-secondary">Logout</button>
+    </div>
   </header>
 
   <!-- Main Content -->
@@ -67,5 +70,11 @@
   </main>
 
   <script src="script.js"></script>
+  <script>
+    document.getElementById('logout-btn').addEventListener('click', async () => {
+      await fetch('/api/logout', { method: 'POST' });
+      window.location.href = '/login';
+    });
+  </script>
 </body>
 </html>

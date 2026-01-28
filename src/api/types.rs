@@ -60,3 +60,22 @@ pub struct MusicTasteOverview {
     pub overlapping_song_details: Option<serde_json::Value>,
     pub overlapping_artist_details: Option<serde_json::Value>,
 }
+
+#[derive(Deserialize)]
+pub struct LoginRequest {
+    pub username: String,
+}
+
+#[derive(Deserialize)]
+pub struct SignupRequest {
+    pub username: String,
+    pub first_name: String,
+    pub last_name: String,
+}
+
+#[derive(Serialize)]
+pub struct AuthResponse {
+    pub success: bool,
+    pub username: Option<String>,
+    pub display_name: Option<String>,
+}

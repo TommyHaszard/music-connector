@@ -13,23 +13,28 @@ use rocket::State;
 use std::path::{Path, PathBuf};
 
 #[get("/")]
-pub async fn index(cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
-    if cookies.get_private("api_token").is_some() {
-        return Ok(Redirect::to("/main"));
+pub async fn index(cookies: &CookieJar<'_>) -> Redirect {
+    if cookies.get_private("user").is_some() {
+        Redirect::to("/main")
+    } else {
+        Redirect::to("/login")
     }
-    Ok(Redirect::to("/login"))
 }
 
 
 #[get("/login")]
-pub async fn login_page(cookies: &CookieJar<'_>) -> Redirect {
-    authenticate(cookies).await
+pub async fn login_page_static() -> Option<NamedFile> {
+    NamedFile::open(Path::new("static").join("login.html")).await.ok()
+}
+
+#[get("/signup")]
+pub async fn signup_page() -> Option<NamedFile> {
+    NamedFile::open(Path::new("static").join("signup.html")).await.ok()
 }
 
 #[get("/main")]
 pub async fn main_page(cookies: &CookieJar<'_>) -> Result<NamedFile, Redirect> {
-    let token = cookies.get_private("api_token");
-    rocket::info!("Cookie check - api_token present: {}", token.is_some());
+    authenticate(cookies).await;
     
     let mut file_path = PathBuf::from("static");
     file_path.push("index.html");
@@ -53,21 +58,26 @@ pub async fn save_songs(
         .get_private("user")
         .map(|cookie| cookie.value().to_string());
 
+
     if user_name_opt.is_none() {
         return Err((
-            Status::InternalServerError,
+            Status::NotFound,
             Json(ErrorResponse {
                 error: "No username".to_string(),
             }),
         ));
     }
 
+
     let user_name = user_name_opt.unwrap();
+
+    rocket::info!("CookieVal: {}", user_name);
+
     let user = db::get_or_insert_user(db_pool, &user_name)
         .await
         .map_err(|err| {
             (
-                Default::default(),
+                Status::NotAcceptable,
                 Json(ErrorResponse {
                     error: format!("Database error: {}", err),
                 }),
