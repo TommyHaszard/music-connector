@@ -22,8 +22,8 @@ pub async fn index(cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
 
 
 #[get("/login")]
-pub async fn login_page() -> Redirect {
-    authenticate().await
+pub async fn login_page(cookies: &CookieJar<'_>) -> Redirect {
+    authenticate(cookies).await
 }
 
 #[get("/main")]

@@ -1,15 +1,17 @@
 use crate::api::internal_api::{login_page, main_page};
 use crate::api::types::{
-    AccessTokenResponse, AddSongsToPlaylistBody, CreatePlaylistBody,
-    ErrorResponse, SearchSongsQuery, Song,
+    AccessTokenResponse, AddSongsToPlaylistBody, CreatePlaylistBody, ErrorResponse,
+    SearchSongsQuery, Song,
 };
+use base64::Engine;
+use base64::engine::general_purpose;
 use reqwest::Client;
 use rocket::http::{Cookie, CookieJar, Status};
 use rocket::response::Redirect;
 use rocket::serde::json::Json;
-use rocket::State;
 use rocket::time::Duration;
 use rocket::tokio::time::sleep;
+use rocket::State;
 use std::collections::HashSet;
 use std::env;
 use std::time::Duration as StdDuration;
@@ -17,21 +19,49 @@ use std::time::Duration as StdDuration;
 static SPOTIFY_AUTH_URL: &str = "https://accounts.spotify.com/authorize";
 static SPOTIFY_TOKEN_URL: &str = "https://accounts.spotify.com/api/token";
 
-pub async fn authenticate() -> Redirect {
+pub async fn authenticate(cookies: &CookieJar<'_>) -> Redirect {
     let client_id = env::var("SPOTIFY_CLIENT");
     if client_id.is_err() {
         Redirect::to("/fail");
     }
 
-    let redirect_uri = env::var("SPOTIFY_REDIRECT_URI").expect("SPOTIFY_REDIRECT_URI must be set");
+    let client_secret = env::var("SPOTIFY_SECRET");
+    if client_secret.is_err() {
+        Redirect::to("/fail");
+    }
 
-    let auth_url = format!(
-        "{}?client_id={}&response_type=code&redirect_uri={}&scope=playlist-modify-public%20user-read-private&state=random_state_string",
-        SPOTIFY_AUTH_URL,
-        client_id.unwrap(),
-        urlencoding::encode(&redirect_uri)
+    let encoded = general_purpose::STANDARD.encode(format!("{}:{}", client_id.unwrap(), client_secret.unwrap()));
+
+    let basic_appended = format!("Basic {}", encoded);
+
+    rocket::info!("JSON: {:?}", encoded);
+
+    let client = Client::new();
+    let response = client
+        .post(SPOTIFY_TOKEN_URL)
+        .header("Content-Type", "application/x-www-form-urlencoded")
+        .header("Authorization", basic_appended)
+        .form(&[
+            ("grant_type", "client_credentials"),
+        ])
+        .send()
+        .await
+        .expect("Failed to get access token");
+
+   let data: AccessTokenResponse = response
+        .json()
+        .await
+        .expect("Failed to parse token response");
+
+    cookies.add_private(
+        Cookie::build(("api_token", data.access_token))
+            .http_only(true)
+            .secure(true)
+            .max_age(Duration::minutes(60)),
     );
-    Redirect::to(auth_url)
+
+    sleep(StdDuration::from_secs(3)).await;
+    Redirect::to("/main")
 }
 
 #[get("/callback?<code>")]
@@ -321,7 +351,7 @@ pub async fn search_spotify_songs(
         .map(|cookie| cookie.value().to_string());
 
     if token.is_none() {
-        login_page().await;
+        login_page(cookies).await;
         let token2 = cookies
             .get_private("api_token")
             .map(|cookie| cookie.value().to_string());

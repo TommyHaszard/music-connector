@@ -1,26 +1,20 @@
-/* ==========================================================================
-   Hottest 100 Design System
-   A bold, modern dark theme with teal accents and purple tertiary
-   ========================================================================== */
-
-/* ==========================================================================
-   1. CSS Custom Properties
-   ========================================================================== */
-
 :root {
-  /* Colors */
-  --color-bg-primary: #121212;
-  --color-bg-elevated: #1a1a1a;
-  --color-bg-hover: #252525;
-  --color-accent: #14B8A6;
-  --color-accent-hover: #2DD4BF;
-  --color-tertiary: #820081;
-  --color-tertiary-hover: #a300a2;
-  --color-text-primary: #FFFFFF;
-  --color-text-secondary: #B3B3B3;
-  --color-text-muted: #6B6B6B;
-  --color-success: #1DB954;
-  --color-border: #2a2a2a;
+  /* Colors - Cocoa & Coral palette */
+  --color-bg-primary: #1e1816;
+  --color-bg-elevated: #2c2422;
+  --color-bg-hover: #3a302c;
+  --color-accent: #e09a8d;
+  --color-accent-hover: #ebb0a5;
+  --color-tertiary: #b88a70;
+  --color-tertiary-hover: #c99b80;
+  --color-text-primary: #f4ebe4;
+  --color-text-secondary: #c9b8ae;
+  --color-text-muted: #8a7a70;
+  --color-success: #7db88a;
+  --color-border: #3d322d;
+  --color-red: #d4837a;
+  --color-green: #7db88a;
+  --color-neutral: #a89080;
 
   /* Typography */
   --font-family: 'Poppins', sans-serif;
@@ -53,7 +47,7 @@
   /* Shadows */
   --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
-  --shadow-accent: 0 4px 20px rgba(20, 184, 166, 0.3);
+  --shadow-accent: 0 4px 20px rgba(224, 154, 141, 0.2);
 
   /* Layout */
   --max-width: 1200px;
@@ -339,7 +333,7 @@ html {
 .input:focus {
   outline: none;
   border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.2);
+  box-shadow: 0 0 0 3px rgba(224, 154, 141, 0.2);
 }
 
 /* --------------------------------------------------------------------------
@@ -382,7 +376,7 @@ html {
   align-items: center;
   height: var(--header-height);
   padding: 0 var(--space-6);
-  background-color: rgba(18, 18, 18, 0.9);
+  background-color: var(--color-bg-elevated);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--color-border);
 }
@@ -730,10 +724,10 @@ html {
 
 @keyframes pulse {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(20, 184, 166, 0.4);
+    box-shadow: 0 0 0 0 rgba(224, 154, 141, 0.4);
   }
   50% {
-    box-shadow: 0 0 0 8px rgba(20, 184, 166, 0);
+    box-shadow: 0 0 0 8px rgba(224, 154, 141, 0);
   }
 }
 
@@ -845,7 +839,7 @@ html {
 }
 
 .stat-card-primary .stat-label {
-  color: rgba(18, 18, 18, 0.7);
+  color: rgba(30, 24, 22, 0.7);
 }
 
 .stat-card-primary .stat-value {

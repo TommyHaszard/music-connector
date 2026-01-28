@@ -197,8 +197,8 @@ function handleRemoveSong(rank) {
 
 // Save songs to server
 async function handleSave() {
-  if (rankedSongs.size < 10) {
-    alert('Please add 10 songs before saving!');
+  if (rankedSongs.size < 5) {
+    alert('Please add 5 songs before saving!');
     return;
   }
 
